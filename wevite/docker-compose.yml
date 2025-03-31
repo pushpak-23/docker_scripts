@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  weaviate:
+    image: semitechnologies/weaviate:latest
+    ports:
+      - "8080:8080"
+    environment:
+      # Optional: Configure persistence and modules
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+      - weaviate_config:/etc/weaviate  # Optional config directory
+    networks:
+      - weaviate-net
+
+volumes:
+  weaviate_data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=<NFS_SERVER_IP>,rw"  # Replace with your NFS server IP/hostname
+      device: ":/nfs/weaviate/data"
+  weaviate_config:  # Optional (for custom configs)
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=<NFS_SERVER_IP>,rw"
+      device: ":/nfs/weaviate/config"
+
+networks:
+  weaviate-net:
+    driver: bridge
