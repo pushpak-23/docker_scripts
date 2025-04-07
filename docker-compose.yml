@@ -11,14 +11,17 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET_NAME: milvus-bucket
+      MINIO_USE_SSL: "false"
     volumes:
       - milvus_data:/var/lib/milvus
     ports:
       - "19530:19530"
       - "9091:9091"
     depends_on:
-      - etcd
-      - minio
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
 
   etcd:
     container_name: milvus-etcd
@@ -33,6 +36,11 @@ services:
     command: etcd -advertise-client-urls=http://0.0.0.0:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
     ports:
       - "2379:2379"
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   minio:
     container_name: milvus-minio
@@ -40,6 +48,8 @@ services:
     environment:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio_data:/data
     command: minio server /data --console-address ":9001"
@@ -52,26 +62,7 @@ services:
       timeout: 20s
       retries: 3
 
-  # This service is optional but helps initialize the bucket
-  minio-init:
-    image: minio/mc:RELEASE.2023-10-25T06-38-57Z
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      until (/usr/bin/mc config host add milvus-minio http://minio:9000 minioadmin minioadmin) do echo '...waiting...' && sleep 1; done &&
-      /usr/bin/mc mb milvus-minio/milvus-bucket &&
-      /usr/bin/mc policy set public milvus-minio/milvus-bucket
-      "
-    networks:
-      - default
-
 volumes:
   milvus_data:
   etcd_data:
   minio_data:
-
-networks:
-  default:
-    name: milvus-network
