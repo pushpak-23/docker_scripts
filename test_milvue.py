@@ -1,3 +1,18 @@
+from pymilvus import connections, utility
+
+# Connect to Milvus
+connections.connect("default", host="localhost", port="19530")
+
+# Check server status
+print(utility.get_server_version())
+
+# Verify Milvus is working
+print("Milvus is working! Collections:", utility.list_collections())
+
+
+
+
+
 from pymilvus import Collection, FieldSchema, DataType, CollectionSchema
 
 # Define schema
